@@ -22,38 +22,56 @@ namespace Demobot.October2017.Dialogs
         {
             //var id = (string)context.ConversationData.GetValue<string>("id");
             //await context.PostAsync($"{id}");
-            context.Activity.Conversation.Id = "newid";
-            await PickFrequency(context);
-            context.Wait(this.MessageReceivedAsync);
+            //context.Activity.Conversation.Id = "newid";
+
+            var message = context.Activity as IMessageActivity;
+            dynamic value = message.Value;
+
+            if (value.FrequencyOfUsage != null && value.MobilePlan == null)
+            {
+                await PickPerformance(context, value);
+            }
+            else if (value.FrequencyOfUsage == null)
+            {
+                await PickFrequency(context);
+            }
+            else
+            {
+                await context.PostAsync($"Kiitos, tilaus lähetetty.");
+                context.Done(value);
+            }
+
+            //context.Wait(this.MessageReceivedAsync);
         }
 
-        public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
-        {
-            try
-            {
-                //var wait = await result;
-                var message = context.Activity as IMessageActivity;
-                dynamic value = message.Value;
+        //public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
+        //{
+        //    try
+        //    {
+        //        var r = await result;
+        //        //var wait = await result;
+        //        var message = context.Activity as IMessageActivity;
+        //        dynamic value = message.Value;
 
-                if (value.FrequencyOfUsage != null && value.MobilePlan == null)
-                {
-                    await PickPerformance(context, value);
-                    context.Wait(this.MessageReceivedAsync);
-                }
-                else
-                {
-                    await context.PostAsync($"Kiitos, tilaus lähetetty.");
-                    context.Done(value);
-                }
+        //        if (value.FrequencyOfUsage != null && value.MobilePlan == null)
+        //        {
+        //            await PickPerformance(context, value);
+        //            context.Wait(this.MessageReceivedAsync);
+        //        }
+        //        else
+        //        {
+        //            
+        //            
+        //        }
                 
-            }
-            catch (Exception ex)
-            {
-                context.Fail(ex);
-            }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        context.Fail(ex);
+        //    }
 
 
-        }
+        //}
 
         private async Task PickFrequency(IDialogContext context)
         { 
@@ -117,7 +135,7 @@ namespace Demobot.October2017.Dialogs
             {
                 //JObject copy = (JObject) submitActionData.DeepClone();
                 //copy.Add("FrequencyOfUsage", JObject.FromObject(f));
-                JObject submitActionData = JObject.Parse("{ \"Type\": \"Plans\" }");
+                JObject submitActionData = JObject.Parse("{ \"Type\": \"PlanSelection\" }");
                 submitActionData.Add("PlanType", PlansDialog.MobileOption);
                 submitActionData.Add("FrequencyOfUsage", JObject.FromObject(f));
                 Column column = AsFrequencyColumnItem(f);

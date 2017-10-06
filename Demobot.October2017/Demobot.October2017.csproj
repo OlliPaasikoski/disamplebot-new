@@ -123,7 +123,7 @@
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\MessagesController.cs" />
-    <Compile Include="Dialogs\MobilePlansDialog.cs" />
+    <Compile Include="Dialogs\MobilePlanDialog.cs" />
     <Compile Include="Dialogs\PlansDialog.cs" />
     <Compile Include="Dialogs\RootDialog.cs" />
     <Compile Include="Dialogs\SupportDialog.cs" />

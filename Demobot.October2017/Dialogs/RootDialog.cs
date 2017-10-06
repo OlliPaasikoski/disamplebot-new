@@ -5,6 +5,9 @@ using Microsoft.Bot.Connector;
 using System.Threading;
 using AdaptiveCards;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using System.Linq;
+using Demobot.October2017.Dialogs;
 
 namespace Demobot.October2017.Dialogs
 {
@@ -25,6 +28,8 @@ namespace Demobot.October2017.Dialogs
         public const string OpticalFibreOption = "Talokaapeli";
         public const string PrepaidOption = "Prepaid";
 
+        private IEnumerable<string> _planOptions = new List<string> { MobileOption, BroadbandOption, OpticalFibreOption, PrepaidOption };
+
         public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
             var message = await result;
@@ -37,15 +42,28 @@ namespace Demobot.October2017.Dialogs
 
                 // dynamic Type property provided with JsonData, see constructor 
                 string submitType = value.Type.ToString();
+                
 
                 switch (submitType)
                 {
                     case "Plans":
-                        PickPlanType(context);
-                        // context.Forward(new PlansDialog(), this.ResumeAfterPlansDialog, message, CancellationToken.None);
+                        await ShowPlanTypesAsync(context);
                         return;
+                    case "PlanSelection":
+                        string planType = value.PlanType.ToString();
+                        switch (planType)
+                        {
+                            case MobileOption:
+                                await context.Forward(new MobilePlanDialog(), this.ResumeAfterPlansDialog, message, CancellationToken.None);
+                                return;
+                            default:
+                                await context.PostAsync("Ei toteutettu vielä.");
+                                context.Wait(MessageReceivedAsync);
+                                return;
+                        }
                     case "CustomerInformation":
                         await context.PostAsync("Ei toteutettu vielä.");
+                        context.Wait(MessageReceivedAsync);
                         return;
                 }
             }
@@ -59,6 +77,50 @@ namespace Demobot.October2017.Dialogs
             }
 
             //context.Wait(MessageReceivedAsync);
+        }
+
+        private async Task ShowPlanTypesAsync(IDialogContext context)
+        {
+
+            AdaptiveCard card = new AdaptiveCard()
+            {
+                Body = new List<CardElement>()
+                {
+                    new TextBlock()
+                    {
+                        Text = "Valitse liittymätyyppi",
+                        Speak = $"<s>Valitse liittymätyyppi</s>",
+                        Size = TextSize.Medium
+                    }
+                },
+                // Buttons
+                Actions = new List<ActionBase>(_planOptions.Select(AsActionItem))
+            };
+
+            Attachment attachment = new Attachment()
+            {
+                ContentType = AdaptiveCard.ContentType,
+                Content = card
+            };
+
+            var reply = context.MakeMessage();
+            reply.Attachments.Add(attachment);
+
+            await context.PostAsync(reply, CancellationToken.None);
+        }
+
+        private ActionBase AsActionItem(string plantype)
+        {
+            var submitActionData = JObject.Parse("{ \"Type\": \"PlanSelection\" }");
+            submitActionData.Add("PlanType", plantype);
+
+            return new SubmitAction
+            {
+                Title = plantype,
+                Speak = $"<s>{plantype}</s>",
+                DataJson = submitActionData.ToString()
+            };
+
         }
 
         private async Task ShowOptionsAsync(IDialogContext context)
@@ -154,35 +216,35 @@ namespace Demobot.October2017.Dialogs
             await context.PostAsync(reply, CancellationToken.None);
         }
 
-        private void PickPlanType(IDialogContext context)
-        {
-            // Result count
-            var title = "Valitse liittymätyyppi";
-            PromptDialog.Choice(context, this.OnPlanTypeSelected, new List<string>() { MobileOption, BroadbandOption, OpticalFibreOption, PrepaidOption }, title, "Valitse jokin liittymävaihtoehdoista");
-        }
+        //private void PickPlanType(IDialogContext context)
+        //{
+        //    // Result count
+        //    var title = "Valitse liittymätyyppi";
+        //    PromptDialog.Choice(context, this.OnPlanTypeSelected, new List<string>() { MobileOption, BroadbandOption, OpticalFibreOption, PrepaidOption }, title, "Valitse jokin liittymävaihtoehdoista");
+        //}
 
-        private async Task OnPlanTypeSelected(IDialogContext context, IAwaitable<string> result)
-        {
-            try
-            {
-                string optionSelected = await result;
+        //private async Task OnPlanTypeSelected(IDialogContext context, IAwaitable<string> result)
+        //{
+        //    try
+        //    {
+        //        string optionSelected = await result;
 
-                switch (optionSelected)
-                {
-                    case MobileOption:
-                        await context.Forward(new MobilePlanDialog(), ResumeAfterMobilePlanDialog, null, CancellationToken.None);
-                        break;
-                    default:
-                        await context.PostAsync($"Demo: {optionSelected} ei toteutettu.");
-                        break;
-                }
-            }
-            catch (TooManyAttemptsException ex)
-            {
-                await context.PostAsync($"Ooops! Too many attemps :(. But don't worry, I'm handling that exception and you can try again!");
-            }
-            context.Wait(this.MessageReceivedAsync);
-        }
+        //        switch (optionSelected)
+        //        {
+        //            case MobileOption:
+        //                await context.Forward(new MobilePlanDialog(), ResumeAfterMobilePlanDialog, null, CancellationToken.None);
+        //                break;
+        //            default:
+        //                await context.PostAsync($"Demo: {optionSelected} ei toteutettu.");
+        //                break;
+        //        }
+        //    }
+        //    catch (TooManyAttemptsException ex)
+        //    {
+        //        await context.PostAsync($"Ooops! Too many attemps :(. But don't worry, I'm handling that exception and you can try again!");
+        //    }
+        //    context.Wait(this.MessageReceivedAsync);
+        //}
 
         private async Task ResumeAfterMobilePlanDialog(IDialogContext context, IAwaitable<object> result)
         {
